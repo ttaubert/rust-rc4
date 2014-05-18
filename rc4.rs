@@ -83,6 +83,7 @@ mod test {
   use RC4RawStream;
   use RC4DataStream;
   use std::io::MemReader;
+  use std::str::from_utf8;
 
   #[test]
   fn test_raw() {
@@ -98,6 +99,13 @@ mod test {
     test_rc4_data("Secret", "Attack at dawn", "45A01F645FC35B383552544B9BF5");
   }
 
+  #[test]
+  fn test_data_decrypt() {
+    test_rc4_data_decrypt("Key", "Plaintext");
+    test_rc4_data_decrypt("Wiki", "pedia");
+    test_rc4_data_decrypt("Secret", "Attack at dawn");
+  }
+
   fn test_rc4_raw(key: &str, hex: &str) {
     let stream = RC4RawStream::new(key.as_bytes());
     cmp_hex(stream, hex);
@@ -107,6 +115,14 @@ mod test {
     let data = MemReader::new(StrBuf::from_str(data).into_bytes());
     let stream = RC4DataStream::new(key.as_bytes(), data);
     cmp_hex(stream, hex);
+  }
+
+  fn test_rc4_data_decrypt(key: &str, plain: &str) {
+    let data = MemReader::new(StrBuf::from_str(plain).into_bytes());
+    let estream = RC4DataStream::new(key.as_bytes(), data);
+    let mut dstream = RC4DataStream::new(key.as_bytes(), estream);
+    let buf = dstream.read_exact(plain.len()).unwrap();
+    assert_eq!(from_utf8(buf.as_slice()).unwrap(), plain);
   }
 
   fn cmp_hex<R: Reader>(mut reader: R, hex: &str) {
